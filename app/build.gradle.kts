@@ -57,7 +57,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("androidx.savedstate:savedstate:2.2.4")
+    implementation("androidx.savedstate:savedstate:1.2.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.google.mlkit:text-recognition:16.0.1")
