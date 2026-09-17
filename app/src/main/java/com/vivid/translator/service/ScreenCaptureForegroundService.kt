@@ -135,7 +135,7 @@ class ScreenCaptureForegroundService : Service() {
             if (recognizedText.isBlank()) {
                 TranslationBus.publishRecognized("")
                 TranslationBus.publishTranslated("")
-                overlayManager?.render("", "")
+                renderOverlay("", "")
                 updatePipelineState(PipelineState.Running)
                 return@launch
             }
@@ -144,14 +144,20 @@ class ScreenCaptureForegroundService : Service() {
             translationResult
                 .onSuccess { translatedText ->
                     TranslationBus.publishTranslated(translatedText)
-                    overlayManager?.render(recognizedText, translatedText)
+                    renderOverlay(recognizedText, translatedText)
                     updatePipelineState(PipelineState.Running)
                 }
                 .onFailure {
                     TranslationBus.publishTranslated("")
-                    overlayManager?.render(recognizedText, "")
+                    renderOverlay(recognizedText, "")
                     updatePipelineState(PipelineState.NetworkFailed)
                 }
+        }
+    }
+
+    private fun renderOverlay(recognizedText: String, translatedText: String) {
+        serviceScope.launch(Dispatchers.Main) {
+            overlayManager?.render(recognizedText, translatedText)
         }
     }
 

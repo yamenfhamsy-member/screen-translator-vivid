@@ -70,7 +70,7 @@ fun HomeScreen(
     ) {
         TopBarRow(onContact = { contactSheetOpen = true })
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = "BUILD V1.2", style = MaterialTheme.typography.labelMedium)
+        Text(text = "BUILD V1.3", style = MaterialTheme.typography.labelMedium)
         Spacer(modifier = Modifier.height(24.dp))
         HeroSection()
         Spacer(modifier = Modifier.height(28.dp))
