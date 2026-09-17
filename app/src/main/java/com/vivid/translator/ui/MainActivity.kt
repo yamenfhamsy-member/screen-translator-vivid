@@ -87,13 +87,17 @@ class MainActivity : ComponentActivity() {
                     onSwapLanguages = translatorViewModel::swapLanguages,
                     onStartSession = { beginSessionFlow() },
                     onStopSession = { endSessionFlow() },
-                    onRetranslate = { requestRetranslate() }
+                    onRetranslate = { requestRetranslate() },
+                    onOpenHome = { openHomeScreen() }
                 )
             }
         }
     }
 
     private fun beginSessionFlow() {
+        ScreenCaptureForegroundService.TranslationBus.publishState(
+            ScreenCaptureForegroundService.PipelineState.Starting
+        )
         if (!Settings.canDrawOverlays(this)) {
             val overlayIntent = Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
@@ -124,6 +128,10 @@ class MainActivity : ComponentActivity() {
         )
         ContextCompat.startForegroundService(this, serviceIntent)
         translatorViewModel.markSessionActive(true)
+        Toast.makeText(this, "Session live — tap OPEN HOME to float over apps", Toast.LENGTH_LONG).show()
+    }
+
+    private fun openHomeScreen() {
         val homeIntent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK

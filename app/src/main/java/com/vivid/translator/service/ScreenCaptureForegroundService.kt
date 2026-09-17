@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.Bitmap
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
@@ -18,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -73,36 +75,51 @@ class ScreenCaptureForegroundService : Service() {
     }
 
     private fun startCaptureSession(resultCode: Int, resultData: Intent?) {
-        if (resultData == null) {
-            updatePipelineState(PipelineState.ConsentMissing)
-            return
+        updatePipelineState(PipelineState.Starting)
+        try {
+            if (resultData == null) {
+                updatePipelineState(PipelineState.ConsentMissing)
+                return
+            }
+            val sessionNotification = buildSessionNotification()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(SessionNotificationId, sessionNotification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+            } else {
+                startForeground(SessionNotificationId, sessionNotification)
+            }
+            val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            val mediaProjection = projectionManager.getMediaProjection(resultCode, resultData)
+            val displayMetrics = resources.displayMetrics
+            val captor = ScreenFrameCaptor(
+                mediaProjection,
+                displayMetrics.widthPixels,
+                displayMetrics.heightPixels,
+                displayMetrics.densityDpi
+            )
+            captor.start()
+            frameCaptor = captor
+            overlayManager?.show { runTranslateCycle() }
+            updatePipelineState(PipelineState.Running)
+            runTranslateCycle()
+        } catch (failure: Exception) {
+            stopCaptureSession()
+            updatePipelineState(PipelineState.StartFailed)
+            stopSelf()
         }
-        val projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        val mediaProjection = projectionManager.getMediaProjection(resultCode, resultData)
-        val displayMetrics = resources.displayMetrics
-        val captor = ScreenFrameCaptor(
-            mediaProjection,
-            displayMetrics.widthPixels,
-            displayMetrics.heightPixels,
-            displayMetrics.densityDpi
-        )
-        captor.start()
-        frameCaptor = captor
-        val sessionNotification = buildSessionNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(SessionNotificationId, sessionNotification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
-        } else {
-            startForeground(SessionNotificationId, sessionNotification)
-        }
-        overlayManager?.show { runTranslateCycle() }
-        updatePipelineState(PipelineState.Running)
-        runTranslateCycle()
     }
 
     private fun runTranslateCycle() {
         serviceScope.launch(Dispatchers.IO) {
             updatePipelineState(PipelineState.Working)
-            val screenBitmap = frameCaptor?.captureFrame()
+            var screenBitmap: Bitmap? = null
+            var captureAttempt = 0
+            while (screenBitmap == null && captureAttempt < 6) {
+                if (captureAttempt > 0) {
+                    delay(400)
+                }
+                screenBitmap = frameCaptor?.captureFrame()
+                captureAttempt += 1
+            }
             if (screenBitmap == null) {
                 updatePipelineState(PipelineState.Running)
                 return@launch
@@ -172,9 +189,11 @@ class ScreenCaptureForegroundService : Service() {
 
     enum class PipelineState {
         Idle,
+        Starting,
         Running,
         Working,
         ConsentMissing,
+        StartFailed,
         OcrFailed,
         NetworkFailed
     }

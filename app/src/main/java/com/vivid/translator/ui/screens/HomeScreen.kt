@@ -57,7 +57,8 @@ fun HomeScreen(
     onSwapLanguages: () -> Unit,
     onStartSession: () -> Unit,
     onStopSession: () -> Unit,
-    onRetranslate: () -> Unit
+    onRetranslate: () -> Unit,
+    onOpenHome: () -> Unit
 ) {
     var contactSheetOpen by remember { mutableStateOf(false) }
     Column(
@@ -69,7 +70,7 @@ fun HomeScreen(
     ) {
         TopBarRow(onContact = { contactSheetOpen = true })
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = "BUILD V1.1", style = MaterialTheme.typography.labelMedium)
+        Text(text = "BUILD V1.2", style = MaterialTheme.typography.labelMedium)
         Spacer(modifier = Modifier.height(24.dp))
         HeroSection()
         Spacer(modifier = Modifier.height(28.dp))
@@ -86,7 +87,8 @@ fun HomeScreen(
             onSwapLanguages = onSwapLanguages,
             onStartSession = onStartSession,
             onStopSession = onStopSession,
-            onRetranslate = onRetranslate
+            onRetranslate = onRetranslate,
+            onOpenHome = onOpenHome
         )
         Spacer(modifier = Modifier.height(20.dp))
         HorizontalDivider(color = AshBorder, thickness = 1.dp)
@@ -155,7 +157,8 @@ private fun SessionControls(
     onSwapLanguages: () -> Unit,
     onStartSession: () -> Unit,
     onStopSession: () -> Unit,
-    onRetranslate: () -> Unit
+    onRetranslate: () -> Unit,
+    onOpenHome: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
@@ -200,6 +203,9 @@ private fun SessionControls(
             } else {
                 VividOutlineAction(label = "START TRANSLATING", onClick = onStartSession, modifier = Modifier.weight(1f))
             }
+        }
+        if (sessionActive) {
+            VividOutlineAction(label = "OPEN HOME — FLOAT OVER APPS", onClick = onOpenHome, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -311,9 +317,11 @@ private fun pipelineStatusLine(
     if (!sessionActive) return "Overlay idle — start a session to float translations."
     return when (pipelineState) {
         ScreenCaptureForegroundService.PipelineState.Idle -> "Session ready."
+        ScreenCaptureForegroundService.PipelineState.Starting -> "Starting capture session."
         ScreenCaptureForegroundService.PipelineState.Running -> "Session live — overlay floating."
         ScreenCaptureForegroundService.PipelineState.Working -> "Reading screen text."
         ScreenCaptureForegroundService.PipelineState.ConsentMissing -> "Capture permission missing — restart session."
+        ScreenCaptureForegroundService.PipelineState.StartFailed -> "Session failed to start — press START and accept every prompt."
         ScreenCaptureForegroundService.PipelineState.OcrFailed -> "Text recognition failed — retry."
         ScreenCaptureForegroundService.PipelineState.NetworkFailed -> "Translation unreachable — check connection."
     }
