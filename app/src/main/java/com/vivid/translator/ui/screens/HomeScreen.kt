@@ -68,7 +68,9 @@ fun HomeScreen(
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
         TopBarRow(onContact = { contactSheetOpen = true })
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(text = "BUILD V1.1", style = MaterialTheme.typography.labelMedium)
+        Spacer(modifier = Modifier.height(24.dp))
         HeroSection()
         Spacer(modifier = Modifier.height(28.dp))
         HorizontalDivider(color = AshBorder, thickness = 1.dp)
