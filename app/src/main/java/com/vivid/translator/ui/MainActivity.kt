@@ -22,6 +22,7 @@ import com.vivid.translator.ui.theme.VividTheme
 
 class MainActivity : ComponentActivity() {
     private val translatorViewModel: TranslatorViewModel by viewModels()
+    private var demoRequested = false
 
     private val captureConsentLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -37,8 +38,14 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) {
         if (Settings.canDrawOverlays(this)) {
-            requestCaptureConsent()
+            if (demoRequested) {
+                demoRequested = false
+                startDemoSession()
+            } else {
+                requestCaptureConsent()
+            }
         } else {
+            demoRequested = false
             Toast.makeText(this, "Overlay permission required", Toast.LENGTH_SHORT).show()
         }
     }
@@ -46,7 +53,12 @@ class MainActivity : ComponentActivity() {
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) {
-        requestCaptureConsent()
+        if (demoRequested) {
+            demoRequested = false
+            startDemoSession()
+        } else {
+            requestCaptureConsent()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,13 +100,15 @@ class MainActivity : ComponentActivity() {
                     onStartSession = { beginSessionFlow() },
                     onStopSession = { endSessionFlow() },
                     onRetranslate = { requestRetranslate() },
-                    onOpenHome = { openHomeScreen() }
+                    onOpenHome = { openHomeScreen() },
+                    onDemoOverlay = { beginDemoFlow() }
                 )
             }
         }
     }
 
     private fun beginSessionFlow() {
+        demoRequested = false
         ScreenCaptureForegroundService.TranslationBus.publishState(
             ScreenCaptureForegroundService.PipelineState.Starting
         )
@@ -116,6 +130,36 @@ class MainActivity : ComponentActivity() {
     private fun requestCaptureConsent() {
         val projectionManager = getSystemService(MediaProjectionManager::class.java)
         captureConsentLauncher.launch(projectionManager.createScreenCaptureIntent())
+    }
+
+    private fun beginDemoFlow() {
+        demoRequested = true
+        ScreenCaptureForegroundService.TranslationBus.publishState(
+            ScreenCaptureForegroundService.PipelineState.Starting
+        )
+        if (!Settings.canDrawOverlays(this)) {
+            val overlayIntent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            overlayAccessLauncher.launch(overlayIntent)
+            return
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            return
+        }
+        demoRequested = false
+        startDemoSession()
+    }
+
+    private fun startDemoSession() {
+        val demoIntent = Intent(this, ScreenCaptureForegroundService::class.java).apply {
+            action = ScreenCaptureForegroundService.ActionDemoOverlay
+        }
+        ContextCompat.startForegroundService(this, demoIntent)
+        translatorViewModel.markSessionActive(true)
+        Toast.makeText(this, "Demo overlay on — leave the app to see it float", Toast.LENGTH_LONG).show()
     }
 
     private fun launchCaptureService(resultCode: Int, resultData: Intent) {

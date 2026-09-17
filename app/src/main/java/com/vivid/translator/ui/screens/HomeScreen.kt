@@ -58,7 +58,8 @@ fun HomeScreen(
     onStartSession: () -> Unit,
     onStopSession: () -> Unit,
     onRetranslate: () -> Unit,
-    onOpenHome: () -> Unit
+    onOpenHome: () -> Unit,
+    onDemoOverlay: () -> Unit
 ) {
     var contactSheetOpen by remember { mutableStateOf(false) }
     Column(
@@ -70,7 +71,7 @@ fun HomeScreen(
     ) {
         TopBarRow(onContact = { contactSheetOpen = true })
         Spacer(modifier = Modifier.height(4.dp))
-        Text(text = "BUILD V1.3", style = MaterialTheme.typography.labelMedium)
+        Text(text = "BUILD V1.4", style = MaterialTheme.typography.labelMedium)
         Spacer(modifier = Modifier.height(24.dp))
         HeroSection()
         Spacer(modifier = Modifier.height(28.dp))
@@ -88,7 +89,8 @@ fun HomeScreen(
             onStartSession = onStartSession,
             onStopSession = onStopSession,
             onRetranslate = onRetranslate,
-            onOpenHome = onOpenHome
+            onOpenHome = onOpenHome,
+            onDemoOverlay = onDemoOverlay
         )
         Spacer(modifier = Modifier.height(20.dp))
         HorizontalDivider(color = AshBorder, thickness = 1.dp)
@@ -158,7 +160,8 @@ private fun SessionControls(
     onStartSession: () -> Unit,
     onStopSession: () -> Unit,
     onRetranslate: () -> Unit,
-    onOpenHome: () -> Unit
+    onOpenHome: () -> Unit,
+    onDemoOverlay: () -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
@@ -206,6 +209,8 @@ private fun SessionControls(
         }
         if (sessionActive) {
             VividOutlineAction(label = "OPEN HOME — FLOAT OVER APPS", onClick = onOpenHome, modifier = Modifier.fillMaxWidth())
+        } else {
+            VividOutlineAction(label = "DEMO OVERLAY", onClick = onDemoOverlay, modifier = Modifier.fillMaxWidth())
         }
     }
 }

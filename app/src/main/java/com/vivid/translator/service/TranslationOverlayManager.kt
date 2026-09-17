@@ -64,6 +64,8 @@ class TranslationOverlayManager(private val hostContext: Context) {
         attached = true
     }
 
+    fun isAttached(): Boolean = attached && overlayView != null
+
     fun render(recognizedText: String, translatedText: String) {
         recognizedSnapshot = recognizedText
         translatedSnapshot = translatedText

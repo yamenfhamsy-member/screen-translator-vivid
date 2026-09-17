@@ -3,6 +3,7 @@ package com.vivid.translator.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -15,6 +16,7 @@ import androidx.core.app.NotificationCompat
 import com.vivid.translator.core.capture.ScreenFrameCaptor
 import com.vivid.translator.core.network.GtxTranslationClient
 import com.vivid.translator.core.ocr.TextRecognitionEngine
+import com.vivid.translator.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -56,6 +58,9 @@ class ScreenCaptureForegroundService : Service() {
             }
             ActionCaptureNow -> {
                 runTranslateCycle()
+            }
+            ActionDemoOverlay -> {
+                startDemoSession()
             }
             ActionStop -> {
                 stopCaptureSession()
@@ -157,7 +162,11 @@ class ScreenCaptureForegroundService : Service() {
 
     private fun renderOverlay(recognizedText: String, translatedText: String) {
         serviceScope.launch(Dispatchers.Main) {
-            overlayManager?.render(recognizedText, translatedText)
+            val manager = overlayManager ?: return@launch
+            if (!manager.isAttached()) {
+                manager.show { runTranslateCycle() }
+            }
+            manager.render(recognizedText, translatedText)
         }
     }
 
@@ -169,11 +178,35 @@ class ScreenCaptureForegroundService : Service() {
         updatePipelineState(PipelineState.Idle)
     }
 
+    private fun startDemoSession() {
+        updatePipelineState(PipelineState.Starting)
+        try {
+            val sessionNotification = buildSessionNotification()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(SessionNotificationId, sessionNotification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+            } else {
+                startForeground(SessionNotificationId, sessionNotification)
+            }
+            overlayManager?.show { runTranslateCycle() }
+            overlayManager?.render("Floating overlay check", "بطاقة عائمة تجريبية")
+            TranslationBus.publishRecognized("Floating overlay check")
+            TranslationBus.publishTranslated("بطاقة عائمة تجريبية")
+            updatePipelineState(PipelineState.Running)
+        } catch (failure: Exception) {
+            stopCaptureSession()
+            updatePipelineState(PipelineState.StartFailed)
+            stopSelf()
+        }
+    }
+
     private fun buildSessionNotification(): Notification {
+        val openIntent = Intent(this, MainActivity::class.java)
+        val openPending = PendingIntent.getActivity(this, 0, openIntent, PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, SessionChannelId)
             .setContentTitle("Vivid Translate")
             .setContentText("Screen translation running")
             .setSmallIcon(android.R.drawable.ic_menu_view)
+            .setContentIntent(openPending)
             .setOngoing(true)
             .build()
     }
@@ -229,6 +262,7 @@ class ScreenCaptureForegroundService : Service() {
     companion object {
         const val ActionStart = "com.vivid.translator.action.START"
         const val ActionCaptureNow = "com.vivid.translator.action.CAPTURE_NOW"
+        const val ActionDemoOverlay = "com.vivid.translator.action.DEMO_OVERLAY"
         const val ActionStop = "com.vivid.translator.action.STOP"
         const val ExtraResultCode = "extra_result_code"
         const val ExtraResultData = "extra_result_data"
