@@ -22,15 +22,18 @@ class TranslationOverlayManager(private val hostContext: Context) {
     private var overlayView: ComposeView? = null
     private var recognizedSnapshot = ""
     private var translatedSnapshot = ""
+    private var retranslateHandler: (() -> Unit)? = null
     private var attached = false
 
     fun show(onRetranslate: () -> Unit) {
+        retranslateHandler = onRetranslate
         if (attached) {
             render(recognizedSnapshot, translatedSnapshot)
             return
         }
         val overlayOwner = OverlayLifecycleOwner()
         overlayOwner.handleCreate()
+        val refreshHandler = retranslateHandler
         val composeView = ComposeView(hostContext).apply {
             setViewTreeLifecycleOwner(overlayOwner)
             setViewTreeSavedStateRegistryOwner(overlayOwner)
@@ -39,7 +42,7 @@ class TranslationOverlayManager(private val hostContext: Context) {
                     TranslationOverlayCard(
                         recognizedText = recognizedSnapshot,
                         translatedText = translatedSnapshot,
-                        onRetranslate = onRetranslate,
+                        onRetranslate = refreshHandler,
                         onDismiss = { dismiss() }
                     )
                 }
@@ -64,12 +67,13 @@ class TranslationOverlayManager(private val hostContext: Context) {
     fun render(recognizedText: String, translatedText: String) {
         recognizedSnapshot = recognizedText
         translatedSnapshot = translatedText
+        val refreshHandler = retranslateHandler
         overlayView?.setContent {
             VividTheme {
                 TranslationOverlayCard(
                     recognizedText = recognizedSnapshot,
                     translatedText = translatedSnapshot,
-                    onRetranslate = null,
+                    onRetranslate = refreshHandler,
                     onDismiss = { dismiss() }
                 )
             }

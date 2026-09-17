@@ -1,5 +1,8 @@
 package com.vivid.translator.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -8,12 +11,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.vivid.translator.ui.theme.AshBorder
 import com.vivid.translator.ui.theme.BoneWhite
@@ -26,6 +31,7 @@ fun TranslationOverlayCard(
     onRetranslate: (() -> Unit)?,
     onDismiss: () -> Unit
 ) {
+    val hostContext = LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -45,14 +51,18 @@ fun TranslationOverlayCard(
                 style = MaterialTheme.typography.bodyLarge
             )
         } else {
-            Text(
-                text = recognizedText.ifBlank { "Listening for text" },
-                style = MaterialTheme.typography.labelMedium
-            )
-            Text(
-                text = translatedText.ifBlank { "Translating" },
-                style = MaterialTheme.typography.titleLarge
-            )
+            SelectionContainer {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = recognizedText.ifBlank { "Listening for text" },
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    Text(
+                        text = translatedText.ifBlank { "Translating" },
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+            }
         }
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -69,6 +79,30 @@ fun TranslationOverlayCard(
                     Text(text = "RETRANSLATE", style = MaterialTheme.typography.labelSmall)
                 }
             }
+            if (translatedText.isNotBlank()) {
+                OutlinedButton(
+                    onClick = { copyOverlayPayload(hostContext, translatedText) },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Obsidian,
+                        contentColor = BoneWhite
+                    )
+                ) {
+                    Text(text = "COPY", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            if (recognizedText.isNotBlank()) {
+                OutlinedButton(
+                    onClick = { copyOverlayPayload(hostContext, recognizedText) },
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Obsidian,
+                        contentColor = BoneWhite
+                    )
+                ) {
+                    Text(text = "COPY SOURCE", style = MaterialTheme.typography.labelSmall)
+                }
+            }
             OutlinedButton(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(0.dp),
@@ -81,4 +115,9 @@ fun TranslationOverlayCard(
             }
         }
     }
+}
+
+private fun copyOverlayPayload(hostContext: Context, payload: String) {
+    val clipboardManager = hostContext.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboardManager.setPrimaryClip(ClipData.newPlainText("VividTranslate", payload))
 }

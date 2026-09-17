@@ -1,6 +1,10 @@
 package com.vivid.translator.ui.screens
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +23,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,7 +32,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.vivid.translator.service.ScreenCaptureForegroundService
 import com.vivid.translator.ui.SupportedLanguage
 import com.vivid.translator.ui.TranslationRecord
@@ -50,9 +57,9 @@ fun HomeScreen(
     onSwapLanguages: () -> Unit,
     onStartSession: () -> Unit,
     onStopSession: () -> Unit,
-    onRetranslate: () -> Unit,
-    onContact: () -> Unit
+    onRetranslate: () -> Unit
 ) {
+    var contactSheetOpen by remember { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -60,7 +67,7 @@ fun HomeScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
-        TopBarRow(onContact = onContact)
+        TopBarRow(onContact = { contactSheetOpen = true })
         Spacer(modifier = Modifier.height(28.dp))
         HeroSection()
         Spacer(modifier = Modifier.height(28.dp))
@@ -87,6 +94,9 @@ fun HomeScreen(
         HorizontalDivider(color = AshBorder, thickness = 1.dp)
         Spacer(modifier = Modifier.height(12.dp))
         HistorySection(history = history)
+    }
+    if (contactSheetOpen) {
+        ContactDialog(onClose = { contactSheetOpen = false })
     }
 }
 
@@ -305,4 +315,75 @@ private fun pipelineStatusLine(
         ScreenCaptureForegroundService.PipelineState.OcrFailed -> "Text recognition failed — retry."
         ScreenCaptureForegroundService.PipelineState.NetworkFailed -> "Translation unreachable — check connection."
     }
+}
+
+@Composable
+private fun ContactDialog(onClose: () -> Unit) {
+    val hostContext = LocalContext.current
+    Dialog(onDismissRequest = onClose) {
+        Surface(
+            color = Obsidian,
+            shape = RoundedCornerShape(0.dp),
+            modifier = Modifier.border(1.dp, AshBorder)
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(text = "CONTACT", style = MaterialTheme.typography.labelSmall)
+                Text(
+                    text = "Reach us on Telegram",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                ContactRow(
+                    handle = "thorfin963",
+                    onOpen = { openTelegramProfile(hostContext, "thorfin963") }
+                )
+                HorizontalDivider(color = AshBorder, thickness = 1.dp)
+                ContactRow(
+                    handle = "ya_ali963",
+                    onOpen = { openTelegramProfile(hostContext, "ya_ali963") }
+                )
+                HorizontalDivider(color = AshBorder, thickness = 1.dp)
+                OutlinedButton(
+                    onClick = onClose,
+                    shape = RoundedCornerShape(0.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Obsidian,
+                        contentColor = BoneWhite
+                    )
+                ) {
+                    Text(text = "CLOSE", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ContactRow(handle: String, onOpen: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = "@" + handle, style = MaterialTheme.typography.bodyLarge)
+        OutlinedButton(
+            onClick = onOpen,
+            shape = RoundedCornerShape(5.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = Obsidian,
+                contentColor = BoneWhite
+            )
+        ) {
+            Text(text = "TELEGRAM", style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+private fun openTelegramProfile(hostContext: Context, profileName: String) {
+    val profileUri = Uri.parse("https://t.me/" + profileName)
+    val viewIntent = Intent(Intent.ACTION_VIEW, profileUri)
+    hostContext.startActivity(viewIntent)
 }

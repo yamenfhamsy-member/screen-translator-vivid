@@ -87,10 +87,7 @@ class MainActivity : ComponentActivity() {
                     onSwapLanguages = translatorViewModel::swapLanguages,
                     onStartSession = { beginSessionFlow() },
                     onStopSession = { endSessionFlow() },
-                    onRetranslate = { requestRetranslate() },
-                    onContact = {
-                        Toast.makeText(this@MainActivity, "hello@vivid.plus", Toast.LENGTH_SHORT).show()
-                    }
+                    onRetranslate = { requestRetranslate() }
                 )
             }
         }
@@ -127,6 +124,11 @@ class MainActivity : ComponentActivity() {
         )
         ContextCompat.startForegroundService(this, serviceIntent)
         translatorViewModel.markSessionActive(true)
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        startActivity(homeIntent)
     }
 
     private fun endSessionFlow() {
